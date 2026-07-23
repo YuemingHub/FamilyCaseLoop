@@ -24,3 +24,6 @@ Thumbs.db
 *.log
 /tmp/
 __pycache__/
+
+# ===== 原始个案材料（未脱敏，绝不进版本库）=====
+cases/_inbox/
