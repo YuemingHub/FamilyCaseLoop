@@ -142,11 +142,11 @@ const PANELS = {
       <p class="desc">谁在说、给谁、任务是什么。对照 <code>00A_角色与任务识别速查卡.md</code>。</p>
       <div class="card">
         <label>谁在说（信息来源）</label>
-        <input type="text" placeholder="如：母亲 / 父亲 / 祖辈 / 老师">
+        <input type="text" placeholder="如：母亲 / 父亲 / 祖辈 / 老师" oninput="selStore.s1who=this.value">
         <label>给谁（服务对象）</label>
-        <input type="text" placeholder="如：13岁厌学男孩家庭">
+        <input type="text" placeholder="如：13岁厌学男孩家庭" oninput="selStore.s1to=this.value">
         <label>任务是什么（本次目标）</label>
-        <input type="text" placeholder="如：判断能否复学 / 缓和亲子冲突">
+        <input type="text" placeholder="如：判断能否复学 / 缓和亲子冲突" oninput="selStore.s1task=this.value">
       </div>
     </div>`,
   S2: ()=>`
@@ -176,9 +176,9 @@ const PANELS = {
       <h2>S4 · 专项边界检查</h2>
       <p class="desc">未成年外部社交 / 第三方接触 / 旧卡 三张清单。对照 <code>templates/minor-external-social-risk-checklist.md</code> 等。</p>
       <div class="card">
-        <div class="check"><input type="checkbox"> 未安排任何未成年与外部陌生人社交接触</div>
-        <div class="check"><input type="checkbox"> 未引入未经家长授权的第三方</div>
-        <div class="check"><input type="checkbox"> 未启用任何"旧卡"（历史风险点已复核）</div>
+        <div class="check"><input type="checkbox" onchange="selStore.s4[0]=this.checked"> 未安排任何未成年与外部陌生人社交接触</div>
+        <div class="check"><input type="checkbox" onchange="selStore.s4[1]=this.checked"> 未引入未经家长授权的第三方</div>
+        <div class="check"><input type="checkbox" onchange="selStore.s4[2]=this.checked"> 未启用任何"旧卡"（历史风险点已复核）</div>
         <p class="hint">任一为否 → 暂停并交人工复核，不得继续自动处理。</p>
       </div>
     </div>`,
@@ -210,17 +210,23 @@ const PANELS = {
   S8: ()=>`
     <div class="panel active">
       <h2>S8 · 回流 / 服务收口</h2>
-      <p class="desc">每次只选 1 个主收口 + 家庭三项同步。对照 <code>31_真实服务闭环主收口规则.md</code>。落点（缺口①）待建。</p>
+      <p class="desc">每次只选 1 个主收口 + 家庭三项同步。对照 <code>31_真实服务闭环主收口规则.md</code>。落点已建：仓库 <code>cases/active/</code>。</p>
       <div class="card">
         <h3>主收口（六选一）</h3>
         <div class="chips" id="closeChips"></div>
       </div>
       <div class="card">
         <h3>三项同步</h3>
-        <div class="check"><input type="checkbox"> 服务家庭情况已同步</div>
-        <div class="check"><input type="checkbox"> 方法/结论已沉淀</div>
-        <div class="check"><input type="checkbox"> 待办/续费节点已记录</div>
-        <p class="hint todo">⏳ 真实案例容器（S8 落点）属缺口①，由后续 C 任务补建。</p>
+        <div class="check"><input type="checkbox" onchange="selStore.s8sync[0]=this.checked"> 服务家庭情况已同步</div>
+        <div class="check"><input type="checkbox" onchange="selStore.s8sync[1]=this.checked"> 方法/结论已沉淀</div>
+        <div class="check"><input type="checkbox" onchange="selStore.s8sync[2]=this.checked"> 待办/续费节点已记录</div>
+      </div>
+      <div class="card">
+        <h3>导出为个案草稿（落回 cases/active/）</h3>
+        <p class="hint">纯前端生成，不写后端。导出后请脱敏并重命名为个案化名（如 <code>个案_小雨妈_2026Q3.md</code>）存入 <code>cases/active/</code>。</p>
+        <button class="act" onclick="downloadTemplate()">下载个案填写模板</button>
+        <button class="ghost act" style="margin-left:8px" onclick="exportCase()">导出本次分析为个案草稿</button>
+        <span class="hint" id="exportHint"></span>
       </div>
     </div>`,
 };
@@ -239,7 +245,7 @@ function render(){
   if(current==="S7") renderS7();
 }
 
-const selStore={cat:null,priv:null,close:null};
+const selStore={cat:null,priv:null,close:null,s1who:"",s1to:"",s1task:"",s4:[false,false,false],s8sync:[false,false,false]};
 function fillChips(elId, items, store, single){
   const box=document.getElementById(elId); if(!box) return;
   box.innerHTML="";
@@ -353,6 +359,93 @@ async function checkHealth(){
     const llm=j.llm_enabled?"LLM 已开":"确定性模式";
     el.textContent=`引擎：在线 · ${llm}`; el.className="on";
   }catch(e){ el.textContent="引擎：离线（先 python run.py）"; el.className="off"; }
+}
+
+// ---------- 个案导出（纯前端，不写后端） ----------
+const CASE_TEMPLATE_MD = `# 个案档案模板 · S0–S8
+
+> 脱敏要求：删除姓名/学校/地名/日期/账号/手机号。未成年个案从严。
+
+## S0 主分类：
+## S1 谁在说 / 给谁 / 任务：
+## S2 隐私级别：公开 / 脱敏 / 未脱敏
+## S3 家长原话（脱敏） + 引擎 risk_level + 安全门触发：
+## S4 专项边界三清单是否通过：
+## S5 承载力 / 行为惯性 / 主次标签 / 置信度：
+## S6 月明风格回复 + 来源：
+## S7 FM 拦截 + 人工质检四项：
+## S8 主收口（六选一）+ 三项同步 + 沉淀结论：
+`;
+
+function buildCaseMarkdown(){
+  const d=RESULT.diagnosis||{};
+  const r=RESULT.route||{};
+  const ts=new Date().toISOString().slice(0,10);
+  const yn=b=>b?"✅":"⬜";
+  const L=[];
+  L.push(`# 个案草稿 · 导出于 ${ts}`);
+  L.push("");
+  L.push("> 由 FamilyCaseLoop guide 自动导出。请脱敏后重命名存入 cases/active/。");
+  L.push("");
+  L.push(`## S0 主分类：${selStore.cat||"—"}`);
+  L.push("");
+  L.push("## S1 角色与任务");
+  L.push(`- 谁在说：${selStore.s1who||"—"}`);
+  L.push(`- 给谁：${selStore.s1to||"—"}`);
+  L.push(`- 任务：${selStore.s1task||"—"}`);
+  L.push("");
+  L.push(`## S2 隐私级别：${selStore.priv||"—"}`);
+  L.push("");
+  L.push("## S3 风险分级 / 安全门");
+  L.push(`- 引擎 risk_level：${RESULT.risk_level||"—"} ／ 安全门：${RESULT.safety_triggered?"是":"否"} ／ 交还月明：${RESULT.handoff_to_yueming?"是":"否"}`);
+  if(d.risk) L.push(`- 风险主体：${d.risk.subject||"—"} ／ 等级：${d.risk.level||"—"} ／ 证据：${(d.risk.evidence||[]).join("、")||"—"}`);
+  L.push(`- 家长原话（请在脱敏后补入 S3 输入框内容）`);
+  L.push("");
+  L.push("## S4 专项边界");
+  L.push(`- 未成年外部社交：${yn(selStore.s4[0])} ／ 未授权第三方：${yn(selStore.s4[1])} ／ 旧卡复核：${yn(selStore.s4[2])}`);
+  L.push("");
+  L.push("## S5 双维诊断");
+  L.push(`- 承载力：${d.capacity} ／ 惯性：${d.inertia}`);
+  L.push(`- 主标签：${d.primary||"—"} ／ 次标签：${(d.secondary||[]).join("、")||"—"} ／ 情绪：${(d.tags||[]).join("、")||"—"}`);
+  L.push(`- 置信度：${typeof d.confidence_score==="number"?d.confidence_score.toFixed(2):d.confidence_score} ／ 需复核：${d.needs_review?"是":"否"}`);
+  L.push(`- 命中证据：${Object.entries(d.evidence||{}).map(([k,v])=>k+":"+(v||[]).join("、")).join("；")||"—"}`);
+  L.push("");
+  L.push("## S6 干预 / 回复");
+  L.push("```");
+  L.push(RESULT.reply||"（无输出）");
+  L.push("```");
+  L.push(`- 来源：${RESULT.source==="llm"?"LLM 润色":"确定性降级"}`);
+  L.push("");
+  L.push("## S7 输出质检");
+  L.push(`- FM 拦截：${(RESULT.fm_violations||[]).join("、")||"无"}`);
+  L.push(`- 姿态：${r.posture||"—"} ／ 内容：${r.content_plan||"—"} ／ 动作数：${r.action_count} ／ 禁步数：${r.no_step_list?"是":"否"}`);
+  L.push("");
+  L.push("## S8 回流 / 收口");
+  L.push(`- 主收口：${selStore.close||"—"}`);
+  L.push(`- 三项同步：${yn(selStore.s8sync[0])} 家庭情况同步 ／ ${yn(selStore.s8sync[1])} 方法沉淀 ／ ${yn(selStore.s8sync[2])} 待办记录`);
+  return L.join("\n");
+}
+
+function exportCase(){
+  const hint=document.getElementById("exportHint");
+  if(!RESULT){ hint.textContent="请先到 S3 运行引擎分析"; hint.style.color="var(--warn)"; return; }
+  const md=buildCaseMarkdown();
+  const blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`个案草稿_${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  hint.textContent="✓ 已下载，请脱敏后存入 cases/active/"; hint.style.color="var(--ok)";
+}
+
+function downloadTemplate(){
+  const blob=new Blob([CASE_TEMPLATE_MD],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="CASE_TEMPLATE.md";
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 checkHealth();
