@@ -6,6 +6,7 @@
 - GET  /          —— 单页可视化工作台（密钥设置 + 决策可视化 + 回复展示）
 """
 from __future__ import annotations
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -16,6 +17,9 @@ from .config import (settings, effective_api_key, effective_provider,
 from .web import INDEX_HTML
 
 app = FastAPI(title=settings.app_name, version="1.1.0")
+
+# 同行引导前端（B 任务）：接线返回仓库根 guide/index.html，不写逻辑
+GUIDE_HTML = (Path(__file__).resolve().parent.parent.parent / "guide" / "index.html").read_text(encoding="utf-8")
 
 
 @app.get("/health")
@@ -72,3 +76,8 @@ def analyze(req: ReplyRequest):
 @app.get("/", response_class=HTMLResponse)
 def index():
     return HTMLResponse(INDEX_HTML)
+
+
+@app.get("/guide", response_class=HTMLResponse)
+def guide():
+    return HTMLResponse(GUIDE_HTML)

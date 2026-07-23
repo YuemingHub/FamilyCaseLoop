@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FamilyCaseLoop · 同行引导前端（骨架）</title>
+<style>
+  :root{
+    --bg:#1e1e1e; --panel:#252526; --panel2:#2d2d30; --line:#3c3c3c;
+    --fg:#d4d4d4; --muted:#9aa0a6; --accent:#4ec9b0; --accent2:#569cd6;
+    --warn:#d7a35a; --danger:#e06c75; --ok:#6a9955;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--fg);font-size:14px;line-height:1.6}
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px;margin-left:8px}
+  #engineStatus{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--muted)}
+  #engineStatus.on{color:var(--ok);border-color:var(--ok)}
+  #engineStatus.off{color:var(--danger);border-color:var(--danger)}
+  .layout{display:flex;min-height:calc(100vh - 53px)}
+  nav.steps{width:210px;border-right:1px solid var(--line);background:var(--panel);
+    padding:10px 0;flex-shrink:0}
+  nav.steps button{display:block;width:100%;text-align:left;background:none;border:none;
+    color:var(--fg);padding:9px 16px;cursor:pointer;font-size:13px;border-left:3px solid transparent}
+  nav.steps button:hover{background:var(--panel2)}
+  nav.steps button.active{background:var(--panel2);border-left-color:var(--accent);color:#fff}
+  nav.steps button .tag{color:var(--accent2);font-weight:600;margin-right:6px}
+  nav.steps .grp{font-size:11px;color:var(--muted);padding:10px 16px 4px;letter-spacing:1px}
+  main{flex:1;padding:22px 26px;overflow:auto}
+  .panel{display:none;max-width:880px}
+  .panel.active{display:block}
+  .panel h2{font-size:18px;margin:0 0 4px}
+  .panel .desc{color:var(--muted);margin:0 0 16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:14px 16px;margin-bottom:14px}
+  .card h3{margin:0 0 8px;font-size:14px;color:var(--accent)}
+  label{display:block;margin:8px 0 4px;color:var(--fg);font-size:13px}
+  textarea,input[type=text],select{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--fg);border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit}
+  textarea{min-height:90px;resize:vertical}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row > *{flex:1;min-width:160px}
+  button.act{background:var(--accent);color:#06231e;border:none;border-radius:6px;
+    padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px}
+  button.act:hover{filter:brightness(1.08)}
+  button.ghost{background:var(--panel2);color:var(--fg);border:1px solid var(--line)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+    padding:5px 12px;font-size:12px;cursor:pointer}
+  .chip.sel{border-color:var(--accent);color:var(--accent)}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+    border-radius:12px;padding:2px 10px;font-size:12px;margin:2px 4px 2px 0}
+  .pill.ok{border-color:var(--ok);color:var(--ok)}
+  .pill.warn{border-color:var(--warn);color:var(--warn)}
+  .pill.danger{border-color:var(--danger);color:var(--danger)}
+  pre{background:#1b1b1b;border:1px solid var(--line);border-radius:6px;padding:12px;
+    white-space:pre-wrap;word-break:break-word;font-size:13px;color:#e6e6e6}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px}
+  .kv b{color:var(--muted);font-weight:500}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .enginebox{border:1px dashed var(--accent2);border-radius:8px;padding:12px;margin-top:10px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--muted);margin-left:6px}
+  .todo{color:var(--warn);font-size:12px}
+  ul.tight{margin:6px 0;padding-left:18px}
+  ul.tight li{margin:3px 0}
+  .check{margin:6px 0}
+  .check input{margin-right:8px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>FamilyCaseLoop<span class="sub">同行引导前端 · 骨架</span></h1></div>
+  <div id="engineStatus">引擎：检测中…</div>
+</header>
+
+<div class="layout">
+  <nav class="steps" id="stepNav"></nav>
+  <main id="main"></main>
+</div>
+
+<script>
+const STEPS = [
+  {id:"S0", label:"接案 / 首咨准备", grp:"引导阶段（不调引擎）"},
+  {id:"S1", label:"角色与任务识别"},
+  {id:"S2", label:"隐私状态判断"},
+  {id:"S3", label:"风险分级 / 安全门", engine:true},
+  {id:"S4", label:"专项边界检查"},
+  {id:"S5", label:"双维诊断 / 定位", engine:true},
+  {id:"S6", label:"干预 / 回复生成", engine:true},
+  {id:"S7", label:"输出质检", engine:true},
+  {id:"S8", label:"回流 / 服务收口", grp:"收口阶段（不调引擎）"},
+];
+
+// 全局状态
+let RESULT = null;          // /analyze 返回
+let current = "S0";
+
+// ---------- 渲染导航 ----------
+const nav = document.getElementById("stepNav");
+STEPS.forEach(s=>{
+  if(s.grp){ const g=document.createElement("div"); g.className="grp"; g.textContent=s.grp; nav.appendChild(g); return; }
+  const b=document.createElement("button");
+  b.innerHTML=`<span class="tag">${s.id}</span>${s.label}`;
+  b.onclick=()=>show(s.id);
+  b.id="nav_"+s.id;
+  nav.appendChild(b);
+});
+
+function show(id){
+  current=id;
+  document.querySelectorAll("nav.steps button").forEach(b=>b.classList.remove("active"));
+  document.getElementById("nav_"+id).classList.add("active");
+  render();
+}
+
+// ---------- 各步骤面板 ----------
+const PANELS = {
+  S0: ()=>`
+    <div class="panel active">
+      <h2>S0 · 接案 / 首咨准备</h2>
+      <p class="desc">家长问题分类入口。先判断本次咨询落在哪一类，再往下走。对照本地工作台 <code>35_家长问题总分类图.md</code>。</p>
+      <div class="card">
+        <h3>选择主类（单选）</h3>
+        <div class="chips" id="catChips"></div>
+        <p class="hint">引导壳内置的是常用分类占位；精确分类以工作台 11 类文档为准。</p>
+      </div>
+      <div class="card">
+        <h3>首咨准备自检</h3>
+        <div class="check"><input type="checkbox"> 已确认家长身份与知情同意</div>
+        <div class="check"><input type="checkbox"> 已说明用途边界（辅助、不替代专业判断）</div>
+        <div class="check"><input type="checkbox"> 已确认本次是否涉及未成年高危</div>
+      </div>
+    </div>`,
+  S1: ()=>`
+    <div class="panel active">
+      <h2>S1 · 角色与任务识别</h2>
+      <p class="desc">谁在说、给谁、任务是什么。对照 <code>00A_角色与任务识别速查卡.md</code>。</p>
+      <div class="card">
+        <label>谁在说（信息来源）</label>
+        <input type="text" placeholder="如：母亲 / 父亲 / 祖辈 / 老师">
+        <label>给谁（服务对象）</label>
+        <input type="text" placeholder="如：13岁厌学男孩家庭">
+        <label>任务是什么（本次目标）</label>
+        <input type="text" placeholder="如：判断能否复学 / 缓和亲子冲突">
+      </div>
+    </div>`,
+  S2: ()=>`
+    <div class="panel active">
+      <h2>S2 · 隐私状态判断</h2>
+      <p class="desc">本案资料能否进入工作流？对照 <code>rules/privacy-ingestion-gate.md</code>。未成年个案一律从严。</p>
+      <div class="card">
+        <h3>隐私级别（单选）</h3>
+        <div class="chips" id="privChips"></div>
+        <p class="hint">未脱敏原始个案不得进入对外/同行链路；如需示例请用脱敏版。</p>
+      </div>
+    </div>`,
+  S3: ()=>`
+    <div class="panel active">
+      <h2>S3 · 风险分级 / 安全门 <span class="badge">调引擎</span></h2>
+      <p class="desc">粘贴家长原话，运行引擎：先做安全门（高危优先），再做风险分级。结果同时驱动 S5/S6/S7。</p>
+      <div class="card">
+        <label>家长原话（第一人称）</label>
+        <textarea id="parentText" placeholder="如：我天天跟他讲道理，还给他列了计划催着他做，结果他更烦了"></textarea>
+        <button class="act" onclick="runAnalyze()">运行引擎分析</button>
+        <span class="hint" id="analyzeHint"></span>
+      </div>
+      <div id="s3out"></div>
+    </div>`,
+  S4: ()=>`
+    <div class="panel active">
+      <h2>S4 · 专项边界检查</h2>
+      <p class="desc">未成年外部社交 / 第三方接触 / 旧卡 三张清单。对照 <code>templates/minor-external-social-risk-checklist.md</code> 等。</p>
+      <div class="card">
+        <div class="check"><input type="checkbox"> 未安排任何未成年与外部陌生人社交接触</div>
+        <div class="check"><input type="checkbox"> 未引入未经家长授权的第三方</div>
+        <div class="check"><input type="checkbox"> 未启用任何"旧卡"（历史风险点已复核）</div>
+        <p class="hint">任一为否 → 暂停并交人工复核，不得继续自动处理。</p>
+      </div>
+    </div>`,
+  S5: ()=>`
+    <div class="panel active">
+      <h2>S5 · 双维诊断 / 问题定位 <span class="badge">调引擎</span></h2>
+      <p class="desc">承载力状态 × 行为惯性 + 七层透镜 + 路由。先看 S3 是否已运行分析。</p>
+      <div id="s5out"></div>
+    </div>`,
+  S6: ()=>`
+    <div class="panel active">
+      <h2>S6 · 干预 / 回复生成 <span class="badge">调引擎</span></h2>
+      <p class="desc">月明风格话术（五句结构）。透镜已化入话术、不露理论名词。LLM 润色取决于是否配置 key。</p>
+      <div id="s6out"></div>
+    </div>`,
+  S7: ()=>`
+    <div class="panel active">
+      <h2>S7 · 输出质检 <span class="badge">调引擎</span></h2>
+      <p class="desc">FM 拦截 + 10 项清单。引擎已做失败模式拦截；下方勾选人工质检项。</p>
+      <div id="s7out"></div>
+      <div class="card">
+        <h3>人工质检勾选</h3>
+        <div class="check"><input type="checkbox"> 未暴露理论名词（L1–L7 已化入）</div>
+        <div class="check"><input type="checkbox"> 未给步骤清单（禁步数区已遵守）</div>
+        <div class="check"><input type="checkbox"> 高危已交人工 / 未自动放行</div>
+        <div class="check"><input type="checkbox"> 主体与边界无越界</div>
+      </div>
+    </div>`,
+  S8: ()=>`
+    <div class="panel active">
+      <h2>S8 · 回流 / 服务收口</h2>
+      <p class="desc">每次只选 1 个主收口 + 家庭三项同步。对照 <code>31_真实服务闭环主收口规则.md</code>。落点（缺口①）待建。</p>
+      <div class="card">
+        <h3>主收口（六选一）</h3>
+        <div class="chips" id="closeChips"></div>
+      </div>
+      <div class="card">
+        <h3>三项同步</h3>
+        <div class="check"><input type="checkbox"> 服务家庭情况已同步</div>
+        <div class="check"><input type="checkbox"> 方法/结论已沉淀</div>
+        <div class="check"><input type="checkbox"> 待办/续费节点已记录</div>
+        <p class="hint todo">⏳ 真实案例容器（S8 落点）属缺口①，由后续 C 任务补建。</p>
+      </div>
+    </div>`,
+};
+
+// ---------- 渲染主区 ----------
+function render(){
+  const main=document.getElementById("main");
+  main.innerHTML = PANELS[current]();
+  // 填充内联选项
+  if(current==="S0") fillChips("catChips",["厌学/拒学","躺平/无动力","抑郁焦虑","亲子冲突","手机/网络","作息紊乱","学习动力","同伴关系","师生冲突","婚家问题","其他"], selStore.cat);
+  if(current==="S2") fillChips("privChips",["公开","脱敏","未脱敏","旧卡"], selStore.priv, true);
+  if(current==="S8") fillChips("closeChips",["使用记录","服务档案","失败记录","规则候选","评测样例","不回流"], selStore.close, true);
+  if(current==="S3") renderS3();
+  if(current==="S5") renderS5();
+  if(current==="S6") renderS6();
+  if(current==="S7") renderS7();
+}
+
+const selStore={cat:null,priv:null,close:null};
+function fillChips(elId, items, store, single){
+  const box=document.getElementById(elId); if(!box) return;
+  box.innerHTML="";
+  items.forEach(it=>{
+    const c=document.createElement("div");
+    c.className="chip"+(store===it?" sel":"");
+    c.textContent=it;
+    c.onclick=()=>{ selStore[elId.replace("Chips","")]=it; render(); };
+    box.appendChild(c);
+  });
+}
+
+// ---------- 引擎调用 ----------
+async function runAnalyze(){
+  const txt=document.getElementById("parentText").value.trim();
+  const hint=document.getElementById("analyzeHint");
+  if(!txt){ hint.textContent="先粘贴家长原话"; hint.style.color="var(--warn)"; return; }
+  hint.textContent="分析中…"; hint.style.color="var(--muted)";
+  try{
+    const r=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({parent_message:txt, mode:"analyze"})});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    RESULT=await r.json();
+    hint.textContent="✓ 已分析，可查看 S5/S6/S7"; hint.style.color="var(--ok)";
+    renderS3();
+  }catch(e){
+    hint.textContent="调用失败："+e.message; hint.style.color="var(--danger)";
+  }
+}
+
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function renderS3(){
+  const box=document.getElementById("s3out"); if(!box) return;
+  if(!RESULT){ box.innerHTML=`<p class="hint">尚未运行分析。请先点上方"运行引擎分析"。</p>`; return; }
+  const d=RESULT.diagnosis||{};
+  const riskPill = RESULT.risk_level==="安全门" ? `<span class="pill danger">安全门</span>`
+    : RESULT.risk_level==="交还月明" ? `<span class="pill warn">交还月明</span>`
+    : `<span class="pill ok">常规</span>`;
+  let riskBody="";
+  if(d.risk){
+    riskBody=`<div class="kv"><b>风险主体</b><span>${esc(d.risk.subject||"—")}</span>
+      <b>风险等级</b><span>${esc(d.risk.level||"—")}</span>
+      <b>风险证据</b><span>${esc((d.risk.evidence||[]).join("、")||"—")}</span></div>`;
+  }
+  box.innerHTML=`<div class="enginebox">
+    <h3>安全门 / 风险分级</h3>
+    <div>${riskPill} ${RESULT.safety_triggered?'<span class="pill danger">已触发安全门</span>':''} ${RESULT.handoff_to_yueming?'<span class="pill warn">交还月明</span>':''}</div>
+    ${riskBody}
+    <p class="hint">安全门最高优先级：若触发，下游回复/诊断仅供复核，不得直接对外。</p>
+  </div>`;
+}
+
+function renderS5(){
+  const box=document.getElementById("s5out"); if(!box) return;
+  if(!RESULT){ box.innerHTML=`<p class="hint">尚未运行分析。请先到 S3 运行引擎。</p>`; return; }
+  const d=RESULT.diagnosis||{};
+  const ev=Object.entries(d.evidence||{}).map(([k,v])=>`<span class="pill">${esc(k)}：${esc((v||[]).join("、"))}</span>`).join("")||"<span class='pill'>（无）</span>";
+  box.innerHTML=`<div class="enginebox">
+    <h3>双维诊断</h3>
+    <div class="kv">
+      <b>承载力状态</b><span>${esc(d.capacity)}</span>
+      <b>行为惯性</b><span>${esc(d.inertia)}</span>
+      <b>主标签</b><span>${esc(d.primary||"—")}</span>
+      <b>次标签</b><span>${esc((d.secondary||[]).join("、")||"—")}</span>
+      <b>情绪标签</b><span>${(d.tags||[]).map(t=>`<span class="pill">${esc(t)}</span>`).join("")||"—"}</span>
+      <b>置信度</b><span>${typeof d.confidence_score==="number"?d.confidence_score.toFixed(2):esc(d.confidence_score)}</span>
+      <b>需复核</b><span>${d.needs_review?'<span class="pill warn">是</span>':'<span class="pill ok">否</span>'}</span>
+    </div>
+    <div style="margin-top:8px"><b style="color:var(--muted)">命中证据：</b><br>${ev}</div>
+    <p class="hint">${esc(d.note||"")}</p>
+  </div>`;
+}
+
+function renderS6(){
+  const box=document.getElementById("s6out"); if(!box) return;
+  if(!RESULT){ box.innerHTML=`<p class="hint">尚未运行分析。请先到 S3 运行引擎。</p>`; return; }
+  const src = RESULT.source==="llm" ? "LLM 润色" : "确定性降级（无 key 或超时）";
+  box.innerHTML=`<div class="enginebox">
+    <h3>月明风格回复</h3>
+    <pre>${esc(RESULT.reply||"（无输出）")}</pre>
+    <p class="hint">来源：${esc(src)} ｜ 激活透镜已化入话术（不露 L1–L7 名词）</p>
+  </div>`;
+}
+
+function renderS7(){
+  const box=document.getElementById("s7out"); if(!box) return;
+  if(!RESULT){ box.innerHTML=`<p class="hint">尚未运行分析。请先到 S3 运行引擎。</p>`; return; }
+  const fm=(RESULT.fm_violations||[]);
+  const r=RESULT.route||{};
+  box.innerHTML=`<div class="enginebox">
+    <h3>失败模式拦截</h3>
+    ${fm.length? fm.map(f=>`<span class="pill danger">${esc(f)}</span>`).join("") : '<span class="pill ok">无 FM 违规</span>'}
+    <h3 style="margin-top:10px">路由策略</h3>
+    <div class="kv">
+      <b>姿态</b><span>${esc(r.posture||"—")}</span>
+      <b>内容策略</b><span>${esc(r.content_plan||"—")}</span>
+      <b>动作数</b><span>${esc(r.action_count)}</span>
+      <b>禁步数清单</b><span>${r.no_step_list?'<span class="pill warn">是</span>':'否'}</span>
+      <b>邀请式</b><span>${r.invite_style?'是':'否'}</span>
+      <b>激活透镜</b><span>${(r.lens||[]).join("、")||"—"}</span>
+    </div>
+  </div>`;
+}
+
+// ---------- 引擎状态 ----------
+async function checkHealth(){
+  const el=document.getElementById("engineStatus");
+  try{
+    const r=await fetch("/health"); const j=await r.json();
+    const llm=j.llm_enabled?"LLM 已开":"确定性模式";
+    el.textContent=`引擎：在线 · ${llm}`; el.className="on";
+  }catch(e){ el.textContent="引擎：离线（先 python run.py）"; el.className="off"; }
+}
+
+checkHealth();
+show("S0");
+</script>
+</body>
+</html>

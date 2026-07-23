@@ -30,7 +30,7 @@ FamilyCaseLoop/
 │   └── .env.example             # 复制为 .env 填 LLM key（不进版本库）
 ├── docs/
 │   └── case-lifecycle-mapping.md  # S0–S8 ↔ 本地工作台资产映射
-├── guide/                       # （待建）同行引导前端
+├── guide/                       # 同行引导前端骨架（S0–S8 导航 + 调 /analyze）
 ├── README.md
 └── .gitignore
 ```
@@ -52,7 +52,7 @@ FamilyCaseLoop/
   - 兜底从「未就绪型」改为「证据不足」（未就绪不再是识别失败的垃圾桶）
 - ✅ 引擎验收：`verify_d.py` 10/10 + `pytest` 10 passed
 - ✅ 映射文档（`docs/case-lifecycle-mapping.md`）
-- ⏳ **B：搭 `guide/` 引导前端骨架**（复用 `engine` + 工作台资产，把 S0–S8 串成界面）
+- ✅ **B：`guide/` 引导前端骨架已建**（S0–S8 步骤导航；S3 粘贴家长原话调 `/analyze`，S5/S6/S7 渲染 diagnosis/reply/fm_violations 切片；顶部 `/health` 显引擎状态）。复用引擎、不写逻辑。
 - ⏳ **C：填真实案例容器缺口**（S8 服务档案落点，待月明落真实个案）
 
 ## 五、安全底线（沿用 START.md 红线）
@@ -68,7 +68,8 @@ FamilyCaseLoop/
 cd engine
 pip install -r requirements.txt
 cp .env.example .env        # 填 LLM_PROVIDER / API_KEY（可选，无 key 走确定性降级）
-python run.py               # 启动 web 引导 + 引擎
+python run.py               # 启动 web 引导 + 引擎（127.0.0.1:8000）
+# 同行引导前端：浏览器打开 http://127.0.0.1:8000/guide
 python verify_d.py          # 跑诊断词表验收（10 样本）
 pytest tests/ -q            # 跑单测
 ```
