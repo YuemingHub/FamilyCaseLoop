@@ -1,0 +1,18 @@
+# 密钥：绝对禁止入库（网页设置的 DeepSeek key 写在这里）
+.env
+.env.local
+
+# Python 缓存 / 测试
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# 本地虚拟环境（若有）
+venv/
+.venv/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
