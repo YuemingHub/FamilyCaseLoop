@@ -1,0 +1,26 @@
+# ===== secrets（绝不进版本库）=====
+.env
+.env.*
+*.key
+*.pem
+credentials*
+
+# ===== python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
+
+# ===== 系统与编辑器 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ===== 本地运行产物 =====
+*.log
+/tmp/
+__pycache__/
