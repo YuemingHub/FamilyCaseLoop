@@ -2,6 +2,7 @@
 from app.reply_gen import generate
 from app.safety_gate import scan_safety, scan_handoff, scan_fm, scan_theory_exposure
 from app.schemas import ReplyRequest
+from app.diagnosis import diagnose_heuristic
 
 
 def test_safety_death():
@@ -55,3 +56,23 @@ def test_reply_deterministic_no_theory_leak():
     assert r.risk_level == "常规"
     assert scan_theory_exposure(r.reply) == []
     assert r.fm_violations == []
+
+
+# —— 否定句弱词误命中修复（甲鱼案"没强逼"问题）——
+def test_diagnosis_negation_excludes_weak_word():
+    # "天天"提供强度，若无否定检测"逼"会命中→动太多型(0.55)；修复后应被排除
+    d = diagnose_heuristic("我们天天也没强逼他")
+    assert d.inertia != "动太多型"
+    assert "否定句排除" in (d.note or "")
+
+
+def test_diagnosis_no_false_negation_suppress():
+    # 正向控制：天天催他 + 忍不住提醒 → 仍判动太多型（"催"未被否定）
+    d = diagnose_heuristic("我天天催他写作业，忍不住提醒")
+    assert d.inertia == "动太多型"
+
+
+def test_diagnosis_flip_resets_negation():
+    # 转折：一开始没催，但后来又天天催了 → 第二处"催"非否定，应计分→动太多型
+    d = diagnose_heuristic("一开始我没催他，但后来又天天催了")
+    assert d.inertia == "动太多型"

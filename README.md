@@ -50,7 +50,8 @@ FamilyCaseLoop/
   - 有意识暂停（`PAUSE_PHRASES`）阻断「动太少型」
   - 多标签带主/次 + 命中证据 + 置信度 + 是否需复核
   - 兜底从「未就绪型」改为「证据不足」（未就绪不再是识别失败的垃圾桶）
-- ✅ 引擎验收：`verify_d.py` 10/10 + `pytest` 10 passed
+  - **否定句检测**：弱词/强短语被「没/不/未/别/无」修饰时不计为行为惯性证据（如「没强逼」中的「逼」不再误判动太多），并记 note 供人工复核
+- ✅ 引擎验收：`verify_d.py` 10/10 + `pytest` 13 passed
 - ✅ 映射文档（`docs/case-lifecycle-mapping.md`）
 - ✅ **B：`guide/` 引导前端骨架已建**（S0–S8 步骤导航；S3 粘贴家长原话调 `/analyze`，S5/S6/S7 渲染 diagnosis/reply/fm_violations 切片；顶部 `/health` 显引擎状态）。复用引擎、不写逻辑。
 - ✅ **C：真实案例容器已补建**（`cases/` 目录 + 模板 + `active/` 落点；`guide` S8 支持纯前端导出草稿/下载模板）。**真实个案内容由月明脱敏后填 `cases/active/`**。
