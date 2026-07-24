@@ -1,10 +1,33 @@
 """安全门与失败模式硬拦截（确定性层，无需 LLM 即可运行与单测）。
 
 优先级：安全门 > 交还月明 > 常规。
-安全门内部：显性暴力/失联/家长自危 始终升门；隐性消亡信号在「反向否认」存在时降级（不升门）。
+安全门内部：自伤行为/显性暴力/失联/家长自危 始终升门；隐性消亡信号在「反向否认」存在时降级（不升门）。
 """
 from __future__ import annotations
+import re
 from typing import List, Optional, Tuple
+
+# —— 自伤行为（始终升安全门，最高优先级）——
+# 实际自伤动作或方法，不等同于意念，必须立即升门
+SELF_HARM_ACTIONS = [
+    "伤害自己", "割腕", "割手", "割自己", "吞药", "吃药过量", "过量服药",
+    "喝洗衣液", "喝消毒液", "喝洁厕灵", "喝农药", "喝漂白剂", "喝洗洁精",
+    "撞墙", "撞头", "咬自己", "烫自己", "烧自己", "掐自己",
+    "结束生命", "了结自己",
+]
+
+# —— 服药过量正则（吃N片/吃了XX N片）——
+PILL_OVERDOSE_RE = re.compile(r"吃.{0,10}\d+片")
+
+# —— 自伤行为正则（伤害了自己/伤害着自己/自我伤害等变体）——
+SELF_HARM_RE = re.compile(r"伤害.{0,3}自己|自我伤害|自残|自伤")
+
+# —— 有害液体吞食正则（喝/吞/吃 + 有害液体名）——
+_HARMFUL_LIQUIDS = ["洗衣液", "消毒液", "洁厕灵", "农药", "漂白剂", "洗洁精",
+                    "安眠药", "百草枯"]
+_HARMFUL_INGEST_RE = re.compile(r"(喝|吞|吃).{0,6}(" + "|".join(_HARMFUL_LIQUIDS) + ")")
+# 反向：有害液体名 + (喝/吞/吃) 也可
+_HARMFUL_INGEST_RE2 = re.compile(r"(" + "|".join(_HARMFUL_LIQUIDS) + r").{0,6}(喝|吞|吃)")
 
 # —— 显性风险（始终升安全门）——
 VIOLENCE_HARD = ["拿刀", "跳楼", "殴打", "家暴", "伤人", "失联", "离家出走",
@@ -18,7 +41,10 @@ PARENT_SELF_HARM = ["一走了之", "开进江里", "开江里"]
 DEATH_WORDS = ["不想活", "活不下去", "想死", "自杀", "自伤", "自残", "轻生",
                "不在了", "没我也好", "拖累所有人", "拖累", "受罪无意义",
                "睡死过去", "闭眼不开", "不醒来", "尸体", "死人", "没气",
-               "像具尸体", "活着没意思", "活着没劲", "受罪"]
+               "像具尸体", "活着没意思", "活着没劲", "受罪",
+               # 自杀意念表述（家瑞案触发补充）
+               "离开世界", "想离开", "不想存在", "活着的意义", "活着没有方向",
+               "没有活着的", "找不到意义", "解脱", "想消失", "消失算了"]
 
 # —— 反向否认（优先，不升安全门，按发呆/耗竭接住）——
 DENIAL_WORDS = ["不想死", "没想死", "就是懒得动", "只是无聊", "只是发呆",
@@ -49,11 +75,22 @@ def _has_denial(text: str) -> bool:
 
 def scan_safety(text: str) -> Tuple[Optional[str], List[str]]:
     """返回 (风险等级, 原因列表)。风险等级为 '安全门' 或 None。"""
+    # 1. 自伤行为（最高优先级，实际动作不等同意念）
+    harm_hit = [w for w in SELF_HARM_ACTIONS if w in text]
+    if harm_hit:
+        return "安全门", [f"自伤行为:{w}" for w in harm_hit]
+    if SELF_HARM_RE.search(text):
+        return "安全门", ["自伤行为:伤害自己(正则匹配)"]
+    if PILL_OVERDOSE_RE.search(text):
+        return "安全门", ["自伤行为:服药过量(吃N片)"]
+    if _HARMFUL_INGEST_RE.search(text) or _HARMFUL_INGEST_RE2.search(text):
+        return "安全门", ["自伤行为:吞食有害液体"]
+    # 2. 显性暴力/失联/精神异常
     if any(w in text for w in VIOLENCE_HARD):
         return "安全门", ["显性风险信号(暴力/失联/精神异常)"]
     if any(w in text for w in PARENT_SELF_HARM):
         return "安全门", ["家长自危线索(优先于交还)"]
-    # 消失：带"一天/躲清静"修饰 → 非消亡
+    # 3. 消亡信号（带反向否认则降级）
     if "消失" in text and not any(m in text for m in ["消失一天", "躲清静"]):
         if not _has_denial(text):
             return "安全门", ["消亡信号:消失(无反向否认)"]

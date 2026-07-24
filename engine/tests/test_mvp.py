@@ -76,3 +76,53 @@ def test_diagnosis_flip_resets_negation():
     # 转折：一开始没催，但后来又天天催了 → 第二处"催"非否定，应计分→动太多型
     d = diagnose_heuristic("一开始我没催他，但后来又天天催了")
     assert d.inertia == "动太多型"
+
+
+# —— S3 安全门自伤/自杀意念补全（家瑞案触发）——
+def test_safety_self_harm_action():
+    """自伤行为关键词必须升门"""
+    lvl, reasons = scan_safety("孩子伤害了自己")
+    assert lvl == "安全门"
+    lvl, reasons = scan_safety("孩子割腕了")
+    assert lvl == "安全门"
+
+
+def test_safety_pill_overdose():
+    """服药过量正则（吃N片）必须升门"""
+    lvl, reasons = scan_safety("孩子吃了布洛芬12片")
+    assert lvl == "安全门"
+    lvl, reasons = scan_safety("她吃了8片安眠药")
+    assert lvl == "安全门"
+
+
+def test_safety_harmful_liquid():
+    """吞食有害液体必须升门"""
+    lvl, reasons = scan_safety("孩子喝了洗衣液")
+    assert lvl == "安全门"
+    lvl, reasons = scan_safety("她吞了消毒液")
+    assert lvl == "安全门"
+
+
+def test_safety_suicidal_ideation_expanded():
+    """扩充的自杀意念表述必须升门"""
+    lvl, _ = scan_safety("孩子说想离开世界")
+    assert lvl == "安全门"
+    lvl, _ = scan_safety("不知道活着的意义在哪里")
+    assert lvl == "安全门"
+    lvl, _ = scan_safety("孩子说活着没有方向")
+    assert lvl == "安全门"
+
+
+def test_safety_jiarui_case_full_text():
+    """家瑞案真实脱敏文本复跑：必须从'常规'升为'安全门'"""
+    text = ("为了逃避考试，吃了布洛芬12片，还喝洗衣液伤害自己来不上学。"
+            "去医院处理后回家，彻底不上学了，觉得活着没有方向，想离开世界。")
+    lvl, reasons = scan_safety(text)
+    assert lvl == "安全门"
+    assert len(reasons) >= 2  # 至少命中2个自伤/意念信号
+
+
+def test_safety_no_false_positive_normal_medication():
+    """正常吃药不误触发（无数字+片组合）"""
+    lvl, _ = scan_safety("孩子每天按时吃药，医生开的")
+    assert lvl is None
